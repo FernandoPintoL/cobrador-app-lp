@@ -57,6 +57,7 @@ app.*.map.json
 .env.local
 .env.production
 .env.staging
+.env.*
 
 # WebSocket Server (Node.js)
 /websocket-server/
