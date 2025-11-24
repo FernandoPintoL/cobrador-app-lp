@@ -199,7 +199,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     });
 
     return MaterialApp(
-      title: Platform.isAndroid ? 'Facebook eLite' : 'CeF Pro',
+      title: 'Cobrador LP',
       debugShowCheckedModeBanner: false,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
