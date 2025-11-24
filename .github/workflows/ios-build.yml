@@ -1,0 +1,66 @@
+name: iOS Build (Flutter)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      # 1. Checkout del repositorio
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Instalar Flutter
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+
+      # 3. Crear archivo .env a partir de GitHub Secrets
+      - name: Create .env file
+        run: |
+          echo "API_URL=${{ secrets.API_URL }}" > .env
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+          echo "SOCKET_URL=${{ secrets.SOCKET_URL }}" >> .env
+          echo "MAPS_API=${{ secrets.MAPS_API }}" >> .env
+
+      # 4. Limpiar build anteriores
+      - name: Flutter Clean
+        run: flutter clean
+
+      # 5. Obtener dependencias
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      # 6. Precache específico para iOS
+      - name: Flutter Precache iOS
+        run: flutter precache --ios
+
+      # 7. Instalar CocoaPods
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod repo update
+          pod install --verbose
+
+      # 8. Construir iOS sin firma
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      # 9. Comprimir el output en build/ios/iphoneos/
+      - name: Zip build
+        run: |
+          cd build/ios/iphoneos
+          zip -r ios-build.zip .
+
+      # 10. Subir artefactos
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/ios/iphoneos/ios-build.zip
