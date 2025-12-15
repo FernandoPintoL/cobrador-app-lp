@@ -176,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             height: 120,
                             margin: const EdgeInsets.only(bottom: 32),
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
+                              shape: BoxShape.rectangle,
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -193,11 +193,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              Icons.account_balance_wallet_rounded,
-                              size: 64,
-                              color: colorScheme.onPrimary,
-                            ),
+                            //colocar imagen assets
+                            child: const Center(
+                              child: Image(
+                                image: AssetImage('assets/icons/icon.png'),
+                                fit: BoxFit.contain,
+                              )),
                           ),
                         ),
 

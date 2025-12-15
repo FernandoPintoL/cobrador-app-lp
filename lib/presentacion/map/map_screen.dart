@@ -65,18 +65,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Inicializa la ubicación del usuario
   Future<void> _initLocation() async {
     try {
+      // Verificar si el servicio de ubicación está habilitado
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
+      if (!serviceEnabled) {
+        if (!mounted) return;
+        _showLocationServiceDialog();
+        return;
+      }
 
+      // Verificar permisos
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied) {
+
+      // Manejar permisos denegados
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        _showPermissionDeniedForeverDialog();
+        return;
+      } else if (permission == LocationPermission.denied) {
+        if (!mounted) return;
+        _showPermissionDeniedDialog();
         return;
       }
 
+      // Obtener ubicación actual
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -85,13 +99,141 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (!mounted) return;
       setState(() => _myLocation = latLng);
 
+      // Centrar mapa en la ubicación del usuario
       if (_mapController != null) {
         await _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(latLng, 15),
         );
       }
-    } catch (_) {
-      // Ignorar silenciosamente
+    } catch (e) {
+      debugPrint('Error al obtener ubicación: $e');
+      if (mounted) {
+        _showLocationErrorDialog();
+      }
+    }
+  }
+
+  /// Muestra diálogo cuando el servicio de ubicación está deshabilitado
+  void _showLocationServiceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Servicio de ubicación deshabilitado'),
+        content: const Text(
+          'Por favor habilita el servicio de ubicación en la configuración de tu dispositivo para ver tu posición en el mapa.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            child: const Text('Abrir configuración'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Muestra diálogo cuando los permisos fueron denegados permanentemente
+  void _showPermissionDeniedForeverDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permisos de ubicación denegados'),
+        content: const Text(
+          'Los permisos de ubicación fueron denegados permanentemente. Para habilitar tu ubicación en el mapa, debes otorgar permisos manualmente en la configuración de la aplicación.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openAppSettings();
+            },
+            child: const Text('Abrir configuración'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Muestra diálogo cuando los permisos fueron denegados
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permisos de ubicación necesarios'),
+        content: const Text(
+          'Esta aplicación necesita acceso a tu ubicación para mostrarte en el mapa y encontrar clientes cercanos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initLocation();
+            },
+            child: const Text('Intentar de nuevo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Muestra diálogo cuando hay un error al obtener la ubicación
+  void _showLocationErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error al obtener ubicación'),
+        content: const Text(
+          'No se pudo obtener tu ubicación actual. Por favor verifica tu conexión y los permisos de ubicación.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initLocation();
+            },
+            child: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Refresca los datos del mapa invalidando el provider
+  Future<void> _refreshData() async {
+    // Invalidar el provider para forzar una nueva carga de datos
+    ref.invalidate(mp_provider.mapLocationClustersProvider);
+
+    // Esperar un momento para que se complete la recarga
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Mostrar mensaje de confirmación
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Datos actualizados'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -475,6 +617,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ],
             ),
             actions: [
+              // Botón de refresh
+              IconButton(
+                onPressed: _refreshData,
+                icon: Icon(Icons.refresh_rounded, color: primaryColor),
+                tooltip: 'Actualizar datos',
+              ),
               if (isAdminOrManager) _buildCobradorSelector(),
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -612,6 +760,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               FutureBuilder<Set<Marker>>(
                 future: _buildMarkers(sortedClusters),
                 builder: (context, snapshot) {
+                  // Mostrar indicador de carga mientras se construyen los markers
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Stack(
+                      children: [
+                        GoogleMap(
+                          mapType: _mapType,
+                          initialCameraPosition: _initialCamera,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          zoomControlsEnabled: false,
+                          markers: const {},
+                          onMapCreated: (controller) {
+                            _mapController = controller;
+                          },
+                        ),
+                        Container(
+                          color: Colors.black12,
+                          child: const Center(
+                            child: Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 16),
+                                    Text('Cargando ubicaciones...'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
                   final markers = snapshot.data ?? {};
                   return GoogleMap(
                     mapType: _mapType,
@@ -648,22 +833,57 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Widget _buildEmptyView() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.place_outlined, size: 48, color: Colors.grey),
-          const SizedBox(height: 8),
-          const Text(
-            'No hay clientes para mostrar',
-            style: TextStyle(color: Colors.grey),
+    return Container(
+      color: Colors.white.withOpacity(0.9),
+      child: Center(
+        child: Card(
+          margin: const EdgeInsets.all(24),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.person_pin_circle_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No hay clientes en el mapa',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No se encontraron clientes con ubicaciones asignadas. '
+                  'Asegúrate de que los clientes tengan direcciones configuradas.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _initLocation(),
+                      icon: const Icon(Icons.my_location),
+                      label: const Text('Mi ubicación'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _refreshData,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refrescar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => setState(() {}),
-            child: const Text('Refrescar'),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -16,9 +16,9 @@ import '../../negocio/providers/auth_provider.dart';
 import '../cliente/location_picker_screen.dart';
 import '../pantallas/change_password_screen.dart';
 import '../widgets/validation_error_widgets.dart';
-import '../widgets/camera/in_app_camera_screen.dart';
 import '../widgets/camera/camera_with_document_detection_screen.dart';
 import '../widgets/camera/camera_with_face_detection_screen.dart';
+import '../widgets/adaptive_form_app_bar.dart';
 
 class CobradorFormScreen extends ConsumerStatefulWidget {
   final Usuario? cobrador; // null para crear, con datos para editar
@@ -184,19 +184,32 @@ class _ManagerCobradorFormScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditMode ? 'Editar Cobrador' : 'Crear Cobrador'),
-        actions: [
-          if (_isEditMode)
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _confirmarEliminarCobrador(),
-              tooltip: 'Eliminar cobrador',
-            ),
-        ],
+      appBar: AdaptiveFormAppBar(
+        title: _isEditMode ? 'Editar Cobrador' : 'Crear Cobrador',
+        showDelete: _isEditMode,
+        onDelete: _confirmarEliminarCobrador,
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+              ? [
+                  colorScheme.background,
+                  colorScheme.surface,
+                ]
+              : [
+                  Colors.grey.shade50,
+                  Colors.white,
+                ],
+          ),
+        ),
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -205,23 +218,66 @@ class _ManagerCobradorFormScreenState
             children: [
               // Información del formulario
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                elevation: isDark ? 2 : 8,
+                shadowColor: isDark
+                  ? Colors.transparent
+                  : Colors.orange.withOpacity(0.3),
+                surfaceTintColor: isDark
+                  ? colorScheme.tertiaryContainer
+                  : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: isDark
+                      ? null
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.orange.shade50,
+                            Colors.white,
+                          ],
+                        ),
+                  ),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      Icon(
-                        _isEditMode ? Icons.edit : Icons.person_add,
-                        size: 48,
-                        color: Theme.of(context).primaryColor,
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.orange.shade400,
+                              Colors.orange.shade600,
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.motorcycle,
+                          size: 40,
+                          color: Colors.white,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
                       Text(
                         _isEditMode
                             ? 'Modificar información del cobrador'
                             : 'Crear nuevo cobrador en tu equipo',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -235,29 +291,58 @@ class _ManagerCobradorFormScreenState
               TextFormField(
                 controller: _nombreController,
                 decoration: InputDecoration(
-                  labelText: 'Nombre completo',
+                  labelText: 'Nombre completo *',
+                  labelStyle: TextStyle(
+                    color: _nombreError != null
+                        ? Colors.red
+                        : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: _nombreError != null
+                      ? Colors.red.shade50
+                      : Colors.orange.shade50.withOpacity(0.3),
                   prefixIcon: Icon(
-                    Icons.person,
-                    color: _nombreError != null ? Colors.red : null,
+                    Icons.person_rounded,
+                    color: _nombreError != null
+                        ? Colors.red
+                        : Colors.orange.shade600,
+                    size: 24,
                   ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _nombreError != null ? Colors.red : Colors.grey,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _nombreError != null
                           ? Colors.red
-                          : Theme.of(context).primaryColor,
+                          : Colors.orange.shade200,
+                      width: 2,
                     ),
                   ),
-                  errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _nombreError != null
+                          ? Colors.red
+                          : Colors.orange.shade200,
+                      width: 2,
+                    ),
                   ),
-                  focusedErrorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _nombreError != null
+                          ? Colors.red
+                          : Colors.orange.shade600,
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
                   ),
                 ),
                 inputFormatters: [
@@ -275,34 +360,63 @@ class _ManagerCobradorFormScreenState
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
-                  labelText: 'Correo electrónico',
+                  labelText: 'Correo electrónico *',
+                  labelStyle: TextStyle(
+                    color: _emailError != null
+                        ? Colors.red
+                        : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: _emailError != null
+                      ? Colors.red.shade50
+                      : Colors.orange.shade50.withOpacity(0.3),
                   prefixIcon: Icon(
-                    Icons.email,
-                    color: _emailError != null ? Colors.red : null,
+                    Icons.email_rounded,
+                    color: _emailError != null
+                        ? Colors.red
+                        : Colors.orange.shade600,
+                    size: 24,
                   ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _emailError != null ? Colors.red : Colors.grey,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _emailError != null
                           ? Colors.red
-                          : Theme.of(context).primaryColor,
+                          : Colors.orange.shade200,
+                      width: 2,
                     ),
                   ),
-                  errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _emailError != null
+                          ? Colors.red
+                          : Colors.orange.shade200,
+                      width: 2,
+                    ),
                   ),
-                  focusedErrorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _emailError != null
+                          ? Colors.red
+                          : Colors.orange.shade600,
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
@@ -316,47 +430,79 @@ class _ManagerCobradorFormScreenState
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               if (!_isEditMode)
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: _isEditMode
                         ? 'Nueva Contraseña (opcional)'
-                        : 'Contraseña',
-                    prefixIcon: Icon(
-                      Icons.lock,
-                      color: _passwordError != null ? Colors.red : null,
+                        : 'Contraseña *',
+                    labelStyle: TextStyle(
+                      color: _passwordError != null
+                          ? Colors.red
+                          : Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
                     ),
-                    border: const OutlineInputBorder(),
-                    enabledBorder: OutlineInputBorder(
+                    filled: true,
+                    fillColor: _passwordError != null
+                        ? Colors.red.shade50
+                        : Colors.orange.shade50.withOpacity(0.3),
+                    prefixIcon: Icon(
+                      Icons.lock_rounded,
+                      color: _passwordError != null
+                          ? Colors.red
+                          : Colors.orange.shade600,
+                      size: 24,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
                         color: _passwordError != null
                             ? Colors.red
-                            : Colors.grey,
+                            : Colors.orange.shade200,
+                        width: 2,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _passwordError != null
+                            ? Colors.red
+                            : Colors.orange.shade200,
+                        width: 2,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
                         color: _passwordError != null
                             ? Colors.red
-                            : Theme.of(context).primaryColor,
+                            : Colors.orange.shade600,
+                        width: 2.5,
                       ),
                     ),
-                    errorBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red, width: 2),
                     ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.red, width: 2.5),
                     ),
                     helperText: _isEditMode
                         ? 'Deja vacío si no deseas cambiar la contraseña'
                         : 'Mínimo 8 caracteres',
+                    helperStyle: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? Icons.visibility_rounded
+                            : Icons.visibility_off_rounded,
+                        color: Colors.orange.shade600,
                       ),
                       onPressed: () {
                         setState(() {
@@ -386,35 +532,64 @@ class _ManagerCobradorFormScreenState
                     return null;
                   },
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // CI obligatorio
               TextFormField(
                 controller: _ciController,
                 decoration: InputDecoration(
                   labelText: 'CI (Cédula de identidad) *',
+                  labelStyle: TextStyle(
+                    color: _ciError != null
+                        ? Colors.red
+                        : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: _ciError != null
+                      ? Colors.red.shade50
+                      : Colors.orange.shade50.withOpacity(0.3),
                   prefixIcon: Icon(
-                    Icons.badge,
-                    color: _ciError != null ? Colors.red : null,
+                    Icons.badge_rounded,
+                    color: _ciError != null
+                        ? Colors.red
+                        : Colors.orange.shade600,
+                    size: 24,
                   ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _ciError != null ? Colors.red : Colors.grey,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _ciError != null
                           ? Colors.red
-                          : Theme.of(context).primaryColor,
+                          : Colors.orange.shade200,
+                      width: 2,
                     ),
                   ),
-                  errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _ciError != null
+                          ? Colors.red
+                          : Colors.orange.shade200,
+                      width: 2,
+                    ),
                   ),
-                  focusedErrorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _ciError != null
+                          ? Colors.red
+                          : Colors.orange.shade600,
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
                   ),
                 ),
                 inputFormatters: [
@@ -430,35 +605,64 @@ class _ManagerCobradorFormScreenState
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // telefono
               TextFormField(
                 controller: _telefonoController,
                 decoration: InputDecoration(
-                  labelText: 'Teléfono',
+                  labelText: 'Teléfono *',
+                  labelStyle: TextStyle(
+                    color: _telefonoError != null
+                        ? Colors.red
+                        : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: _telefonoError != null
+                      ? Colors.red.shade50
+                      : Colors.orange.shade50.withOpacity(0.3),
                   prefixIcon: Icon(
-                    Icons.phone,
-                    color: _telefonoError != null ? Colors.red : null,
+                    Icons.phone_rounded,
+                    color: _telefonoError != null
+                        ? Colors.red
+                        : Colors.orange.shade600,
+                    size: 24,
                   ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _telefonoError != null ? Colors.red : Colors.grey,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _telefonoError != null
                           ? Colors.red
-                          : Theme.of(context).primaryColor,
+                          : Colors.orange.shade200,
+                      width: 2,
                     ),
                   ),
-                  errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _telefonoError != null
+                          ? Colors.red
+                          : Colors.orange.shade200,
+                      width: 2,
+                    ),
                   ),
-                  focusedErrorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _telefonoError != null
+                          ? Colors.red
+                          : Colors.orange.shade600,
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
                   ),
                 ),
                 keyboardType: TextInputType.phone,
@@ -466,63 +670,134 @@ class _ManagerCobradorFormScreenState
                 validator: (value) =>
                     PhoneUtils.validatePhone(value, required: true),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               TextFormField(
                 controller: _direccionController,
                 decoration: InputDecoration(
-                  labelText: 'Dirección',
+                  labelText: 'Dirección *',
+                  labelStyle: TextStyle(
+                    color: _direccionError != null
+                        ? Colors.red
+                        : Colors.green.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: _direccionError != null
+                      ? Colors.red.shade50
+                      : Colors.green.shade50.withOpacity(0.3),
                   prefixIcon: Icon(
-                    Icons.location_on,
-                    color: _direccionError != null ? Colors.red : null,
+                    Icons.location_on_rounded,
+                    color: _direccionError != null
+                        ? Colors.red
+                        : Colors.green.shade600,
+                    size: 24,
                   ),
-                  border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _direccionError != null ? Colors.red : Colors.grey,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
                       color: _direccionError != null
                           ? Colors.red
-                          : Theme.of(context).primaryColor,
+                          : Colors.green.shade200,
+                      width: 2,
                     ),
                   ),
-                  errorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _direccionError != null
+                          ? Colors.red
+                          : Colors.green.shade200,
+                      width: 2,
+                    ),
                   ),
-                  focusedErrorBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _direccionError != null
+                          ? Colors.red
+                          : Colors.green.shade600,
+                      width: 2.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
                   ),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Botón para obtener ubicación actual automática
-                      IconButton(
-                        icon: Icon(
-                          _ubicacionObtenida
-                              ? Icons.gps_fixed
-                              : Icons.gps_not_fixed,
-                          color: _ubicacionObtenida ? Colors.green : null,
+                      Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: _ubicacionObtenida
+                              ? Colors.green.shade100
+                              : Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        onPressed: _obtenerUbicacionActual,
-                        tooltip: 'Obtener ubicación actual',
+                        child: IconButton(
+                          icon: Icon(
+                            _ubicacionObtenida
+                                ? Icons.gps_fixed_rounded
+                                : Icons.gps_not_fixed_rounded,
+                            size: 20,
+                            color: _ubicacionObtenida
+                                ? Colors.green.shade700
+                                : Colors.blue.shade700,
+                          ),
+                          onPressed: _obtenerUbicacionActual,
+                          tooltip: 'Obtener ubicación actual',
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                        ),
                       ),
                       // Botón para abrir mapa y seleccionar manualmente
-                      IconButton(
-                        icon: const Icon(
-                          Icons.map,
-                          color: Colors.blue,
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: _ubicacionObtenida
+                              ? Colors.green.shade100
+                              : Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        onPressed: _abrirMapaParaSeleccionar,
-                        tooltip: 'Seleccionar en mapa',
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.map_rounded,
+                            size: 20,
+                            color: _ubicacionObtenida
+                                ? Colors.green.shade700
+                                : Colors.orange.shade700,
+                          ),
+                          onPressed: _abrirMapaParaSeleccionar,
+                          tooltip: 'Seleccionar en mapa',
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                        ),
                       ),
                     ],
                   ),
                   helperText: _ubicacionObtenida
                       ? 'Ubicación GPS obtenida ✓'
                       : 'Presiona el botón GPS para obtener ubicación automáticamente',
+                  helperStyle: TextStyle(
+                    color: _ubicacionObtenida
+                        ? Colors.green.shade700
+                        : Colors.grey.shade600,
+                    fontWeight: _ubicacionObtenida
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
                 ),
                 maxLines: 2,
                 validator: (value) {
@@ -532,31 +807,101 @@ class _ManagerCobradorFormScreenState
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Carga de imágenes de CI y perfil
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                elevation: isDark ? 2 : 8,
+                shadowColor: isDark
+                  ? Colors.transparent
+                  : Colors.purple.withOpacity(0.2),
+                surfaceTintColor: isDark
+                  ? colorScheme.secondaryContainer
+                  : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: isDark
+                      ? null
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            Colors.purple.shade50.withOpacity(0.3),
+                          ],
+                        ),
+                  ),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Documentos de Identidad',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _isEditMode
-                            ? 'Puedes actualizar las fotos del CI si es necesario'
-                            : 'Puedes subir las fotos del CI ahora o después (opcional)',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 12),
-                      ),
-                      const SizedBox(height: 12),
                       Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.purple.shade400,
+                                  Colors.purple.shade600,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.purple.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Documentos de Identidad',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple.shade800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _isEditMode
+                                      ? 'Puedes actualizar las fotos del CI si es necesario'
+                                      : 'Puedes subir las fotos del CI ahora o después (opcional)',
+                                  style: TextStyle(
+                                    color: _isEditMode
+                                        ? Colors.grey[600]
+                                        : Colors.purple.shade600,
+                                    fontSize: 12,
+                                    fontWeight: _isEditMode
+                                        ? FontWeight.normal
+                                        : FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildImagePicker(
                             label: 'CI Anverso',
@@ -583,10 +928,37 @@ class _ManagerCobradorFormScreenState
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Las imágenes deben pesar menos de 1MB. Se comprimen automáticamente.',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.amber.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: Colors.amber.shade800,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Las imágenes deben pesar menos de 1MB. Se comprimen automáticamente.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.amber.shade900,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -599,25 +971,96 @@ class _ManagerCobradorFormScreenState
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => Navigator.pop(context),
-                      child: const Text('Cancelar'),
+                    child: Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.pop(context),
+                        icon: const Icon(Icons.cancel_outlined, size: 22),
+                        label: const Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(
+                            color: Colors.grey.shade400,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _guardarCobrador,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(_isEditMode ? 'Actualizar' : 'Crear Cobrador'),
+                    child: Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.8),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).primaryColor.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _guardarCobrador,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Icon(
+                                _isEditMode ? Icons.save_rounded : Icons.person_add_rounded,
+                                size: 22,
+                              ),
+                        label: Text(
+                          _isEditMode ? 'Actualizar' : 'Crear Cobrador',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -669,6 +1112,7 @@ class _ManagerCobradorFormScreenState
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -1048,14 +1492,39 @@ class _ManagerCobradorFormScreenState
     required VoidCallback onTap,
     bool isProcessing = false,
   }) {
+    final bool hasImage = file != null || (existingUrl != null && existingUrl.isNotEmpty);
+
     return Expanded(
       child: InkWell(
         onTap: isProcessing ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 90,
+          height: 110,
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
+            gradient: hasImage
+                ? null
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.purple.shade50,
+                      Colors.purple.shade100.withOpacity(0.5),
+                    ],
+                  ),
+            border: Border.all(
+              color: hasImage
+                  ? Colors.purple.shade400
+                  : Colors.purple.shade200,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.purple.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Stack(
             children: [
@@ -1063,68 +1532,108 @@ class _ManagerCobradorFormScreenState
                 builder: (_) {
                   if (file != null) {
                     return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.file(
                         file,
                         fit: BoxFit.cover,
                         width: double.infinity,
+                        height: double.infinity,
                       ),
                     );
                   } else if (existingUrl != null && existingUrl.isNotEmpty) {
                     return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.network(
                         existingUrl,
                         fit: BoxFit.cover,
                         width: double.infinity,
+                        height: double.infinity,
                       ),
                     );
                   }
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.add_a_photo,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade100,
+                          shape: BoxShape.circle,
                         ),
-                        textAlign: TextAlign.center,
+                        child: Icon(
+                          Icons.add_photo_alternate_rounded,
+                          size: 28,
+                          color: Colors.purple.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.purple.shade800,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                        ),
                       ),
                     ],
                   );
                 },
               ),
+              // Badge de edición cuando hay imagen
+              if (hasImage && !isProcessing)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade600,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               // Overlay de carga durante procesamiento
               if (isProcessing)
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(
-                          strokeWidth: 2,
+                          strokeWidth: 3,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             Colors.white,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 10),
                         Text(
                           'Procesando...',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

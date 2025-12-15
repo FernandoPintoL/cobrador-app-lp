@@ -106,7 +106,7 @@ class _ManagerDashboardScreenState
     return Scaffold(
       backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Panel de Gestión Manager'),
+        title: const Text('Panel de Administrador'),
         backgroundColor: RoleColors.managerPrimary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -302,7 +302,7 @@ class _ManagerDashboardScreenState
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Manager',
+                                    'Administrador',
                                     style: TextStyle(
                                       color: RoleColors.managerPrimary,
                                       fontWeight: FontWeight.bold,
@@ -366,7 +366,7 @@ class _ManagerDashboardScreenState
                           title: 'Cobradores Activos',
                           value:
                               '${managerState.estadisticas?['total_cobradores'] ?? 0}',
-                          icon: Icons.person_pin,
+                          icon: Icons.motorcycle,
                           color: Colors.blue,
                           onTap: () => _navigateToCollectorManagement(context),
                         ),
@@ -424,7 +424,7 @@ class _ManagerDashboardScreenState
               ModernActionCard(
                 title: 'Gestión de Cobradores',
                 description: 'Crear, editar y asignar cobradores',
-                icon: Icons.person_add,
+                icon: Icons.motorcycle,
                 color: Colors.blue,
                 onTap: () => _navigateToCollectorManagement(context),
               ),

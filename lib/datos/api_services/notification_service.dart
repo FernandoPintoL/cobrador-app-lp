@@ -30,7 +30,7 @@ class NotificationService {
     try {
       // Configuración para Android - usar el icono de notificación personalizado
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher'); // Usar el ícono por defecto del launcher para evitar faltantes
+          AndroidInitializationSettings('@drawable/ic_notification');
 
       // Configuración para iOS
       const DarwinInitializationSettings initializationSettingsIOS =

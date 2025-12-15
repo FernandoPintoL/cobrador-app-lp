@@ -14,9 +14,9 @@ import '../../negocio/providers/user_management_provider.dart';
 import '../../negocio/providers/auth_provider.dart';
 import '../../config/role_colors.dart';
 import 'location_picker_screen.dart';
-import '../widgets/camera/in_app_camera_screen.dart';
 import '../widgets/camera/camera_with_document_detection_screen.dart';
 import '../widgets/camera/camera_with_face_detection_screen.dart';
+import '../widgets/adaptive_form_app_bar.dart';
 
 class ClienteFormScreen extends ConsumerStatefulWidget {
   final Usuario? cliente; // null para crear, con datos para editar
@@ -293,33 +293,56 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_esEdicion ? 'Editar Cliente' : 'Crear Cliente'),
-        backgroundColor: RoleColors.managerPrimary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        actions: [
-          if (_esEdicion)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _confirmarEliminarCliente,
-            ),
-        ],
+      appBar: AdaptiveFormAppBar(
+        title: _esEdicion ? 'Editar Cliente' : 'Crear Cliente',
+        showDelete: _esEdicion,
+        onDelete: _confirmarEliminarCliente,
+        customColor: RoleColors.managerPrimary,
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text('Procesando, por favor espera...'),
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      RoleColors.managerPrimary,
+                    ),
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Procesando, por favor espera...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             )
-          : SingleChildScrollView(
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                    ? [
+                        colorScheme.background,
+                        colorScheme.surface,
+                      ]
+                    : [
+                        Colors.grey.shade50,
+                        Colors.white,
+                      ],
+                ),
+              ),
+              child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
@@ -327,50 +350,133 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                      elevation: isDark ? 2 : 8,
+                      shadowColor: isDark
+                        ? Colors.transparent
+                        : Colors.blue.withOpacity(0.2),
+                      surfaceTintColor: isDark
+                        ? colorScheme.primaryContainer
+                        : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: isDark
+                            ? null
+                            : LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white,
+                                  Colors.blue.shade50.withOpacity(0.3),
+                                ],
+                              ),
+                        ),
+                        padding: const EdgeInsets.all(20.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Información Personal',
-                              style: Theme.of(context).textTheme.titleLarge,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.blue.shade400,
+                                        Colors.blue.shade600,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.blue.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Información Personal',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade800,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                             // Campo de Nombre
                             TextFormField(
                               controller: _nombreController,
                               decoration: InputDecoration(
                                 labelText: 'Nombre *',
+                                labelStyle: TextStyle(
+                                  color: _nombreError != null
+                                      ? Colors.red
+                                      : Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                filled: true,
+                                fillColor: _nombreError != null
+                                    ? Colors.red.shade50
+                                    : Colors.blue.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _nombreError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _nombreError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _nombreError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.blue.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.person,
+                                  Icons.person_rounded,
                                   color: _nombreError != null
                                       ? Colors.red
-                                      : null,
+                                      : Colors.blue.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _nombreError,
                               ),
@@ -390,41 +496,69 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
                             // Campo de Apellidos
                             TextFormField(
                               controller: _apellidosController,
                               decoration: InputDecoration(
                                 labelText: 'Apellidos *',
+                                labelStyle: TextStyle(
+                                  color: _apellidosError != null
+                                      ? Colors.red
+                                      : Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                filled: true,
+                                fillColor: _apellidosError != null
+                                    ? Colors.red.shade50
+                                    : Colors.blue.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _apellidosError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _apellidosError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _apellidosError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.blue.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.person_outline,
+                                  Icons.people_rounded,
                                   color: _apellidosError != null
                                       ? Colors.red
-                                      : null,
+                                      : Colors.blue.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _apellidosError,
                               ),
@@ -444,39 +578,69 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
                             // CI obligatorio
                             TextFormField(
                               controller: _ciController,
                               decoration: InputDecoration(
                                 labelText: 'CI (Cédula de identidad) *',
+                                labelStyle: TextStyle(
+                                  color: _ciError != null
+                                      ? Colors.red
+                                      : Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                filled: true,
+                                fillColor: _ciError != null
+                                    ? Colors.red.shade50
+                                    : Colors.blue.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _ciError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _ciError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _ciError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.blue.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.badge,
-                                  color: _ciError != null ? Colors.red : null,
+                                  Icons.badge_rounded,
+                                  color: _ciError != null
+                                      ? Colors.red
+                                      : Colors.blue.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _ciError,
                               ),
@@ -496,40 +660,68 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
                             TextFormField(
                               controller: _telefonoController,
                               decoration: InputDecoration(
                                 labelText: 'Teléfono *',
+                                labelStyle: TextStyle(
+                                  color: _telefonoError != null
+                                      ? Colors.red
+                                      : Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                filled: true,
+                                fillColor: _telefonoError != null
+                                    ? Colors.red.shade50
+                                    : Colors.blue.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _telefonoError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _telefonoError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.blue.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _telefonoError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.blue.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.phone,
+                                  Icons.phone_rounded,
                                   color: _telefonoError != null
                                       ? Colors.red
-                                      : null,
+                                      : Colors.blue.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _telefonoError,
                               ),
@@ -540,86 +732,144 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 required: true,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
                             // Campo de Dirección Principal
                             TextFormField(
                               controller: _direccionController,
                               decoration: InputDecoration(
                                 labelText: 'Dirección *',
+                                labelStyle: TextStyle(
+                                  color: _direccionError != null
+                                      ? Colors.red
+                                      : Colors.green.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 hintText: 'Ej: Av. Principal 123, 4to Anillo',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 14,
+                                ),
+                                filled: true,
+                                fillColor: _direccionError != null
+                                    ? Colors.red.shade50
+                                    : Colors.green.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _direccionError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.green.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _direccionError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.green.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _direccionError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.green.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.location_on,
+                                  Icons.location_on_rounded,
                                   color: _direccionError != null
                                       ? Colors.red
-                                      : null,
+                                      : Colors.green.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _direccionError,
                                 suffixIcon: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     // Botón para obtener ubicación actual
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.my_location,
-                                        size: 20,
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 4),
+                                      decoration: BoxDecoration(
                                         color: _ubicacionObtenida
-                                            ? Colors.green
-                                            : Colors.blue,
+                                            ? Colors.green.shade100
+                                            : Colors.blue.shade100,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      onPressed: _obtenerUbicacionActual,
-                                      tooltip: 'Obtener mi ubicación actual',
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
+                                      child: IconButton(
+                                        icon: Icon(
+                                          Icons.my_location_rounded,
+                                          size: 20,
+                                          color: _ubicacionObtenida
+                                              ? Colors.green.shade700
+                                              : Colors.blue.shade700,
+                                        ),
+                                        onPressed: _obtenerUbicacionActual,
+                                        tooltip: 'Obtener mi ubicación actual',
+                                        constraints: const BoxConstraints(
+                                          minWidth: 36,
+                                          minHeight: 36,
+                                        ),
+                                        padding: const EdgeInsets.all(4),
                                       ),
-                                      padding: const EdgeInsets.all(4),
                                     ),
                                     // Botón para seleccionar en mapa
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.map,
-                                        size: 20,
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
                                         color: _ubicacionObtenida
-                                            ? Colors.green
-                                            : Colors.orange,
+                                            ? Colors.green.shade100
+                                            : Colors.orange.shade100,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      onPressed: _obtenerUbicacionGPS,
-                                      tooltip: 'Seleccionar en mapa',
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
+                                      child: IconButton(
+                                        icon: Icon(
+                                          Icons.map_rounded,
+                                          size: 20,
+                                          color: _ubicacionObtenida
+                                              ? Colors.green.shade700
+                                              : Colors.orange.shade700,
+                                        ),
+                                        onPressed: _obtenerUbicacionGPS,
+                                        tooltip: 'Seleccionar en mapa',
+                                        constraints: const BoxConstraints(
+                                          minWidth: 36,
+                                          minHeight: 36,
+                                        ),
+                                        padding: const EdgeInsets.all(4),
                                       ),
-                                      padding: const EdgeInsets.all(4),
                                     ),
                                   ],
                                 ),
                                 helperText: _ubicacionObtenida
                                     ? '${_getTipoUbicacionTexto()} ✓'
                                     : 'Ingresa la dirección principal (calle, avenida, número)',
+                                helperStyle: TextStyle(
+                                  color: _ubicacionObtenida
+                                      ? Colors.green.shade700
+                                      : Colors.grey.shade600,
+                                  fontWeight: _ubicacionObtenida
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
                               ),
                               maxLines: 2,
                               keyboardType: TextInputType.streetAddress,
@@ -631,88 +881,144 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
                             // Campo de Descripción de la Casa
                             TextFormField(
                               controller: _descripcionCasaController,
                               decoration: InputDecoration(
                                 labelText: 'Descripción de la casa',
+                                labelStyle: TextStyle(
+                                  color: _descripcionCasaError != null
+                                      ? Colors.red
+                                      : Colors.green.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 hintText:
                                     'Ej: Casa de dos pisos color azul, portón negro, junto al parque',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 14,
+                                ),
+                                filled: true,
+                                fillColor: _descripcionCasaError != null
+                                    ? Colors.red.shade50
+                                    : Colors.green.shade50.withOpacity(0.3),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _descripcionCasaError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.green.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _descripcionCasaError != null
                                         ? Colors.red
-                                        : Colors.grey,
+                                        : Colors.green.shade200,
+                                    width: 2,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
                                     color: _descripcionCasaError != null
                                         ? Colors.red
-                                        : Theme.of(context).primaryColor,
+                                        : Colors.green.shade600,
+                                    width: 2.5,
                                   ),
                                 ),
-                                errorBorder: const OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.red),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2.5,
+                                  ),
                                 ),
                                 prefixIcon: Icon(
-                                  Icons.home_outlined,
+                                  Icons.home_rounded,
                                   color: _descripcionCasaError != null
                                       ? Colors.red
-                                      : null,
+                                      : Colors.green.shade600,
+                                  size: 24,
                                 ),
                                 errorText: _descripcionCasaError,
                                 helperText:
                                     'Describe características distintivas de la casa para facilitar su ubicación',
+                                helperStyle: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
                               ),
                               maxLines: 3,
                               keyboardType: TextInputType.multiline,
                               textInputAction: TextInputAction.newline,
                             ),
                             if (_ubicacionObtenida) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 12),
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.green.withValues(alpha: 0.3),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.green.shade50,
+                                      Colors.green.shade100.withOpacity(0.5),
+                                    ],
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.green.shade300,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      _tipoUbicacion == 'actual'
-                                          ? Icons.my_location
-                                          : _tipoUbicacion == 'mapa'
-                                          ? Icons.map
-                                          : Icons.location_on,
-                                      color: Colors.green,
-                                      size: 16,
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade600,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _tipoUbicacion == 'actual'
+                                            ? Icons.my_location_rounded
+                                            : _tipoUbicacion == 'mapa'
+                                            ? Icons.map_rounded
+                                            : Icons.location_on_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
                                         'Lat: ${_latitud?.toStringAsFixed(4)}, Lng: ${_longitud?.toStringAsFixed(4)}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.w500,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.green.shade800,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () {
                                         setState(() {
@@ -723,19 +1029,19 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                         });
                                       },
                                       child: Container(
-                                        padding: const EdgeInsets.all(4),
+                                        padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: Colors.red.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                                          color: Colors.red.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.red.shade300,
+                                            width: 1,
                                           ),
                                         ),
-                                        child: const Icon(
-                                          Icons.clear,
-                                          size: 12,
-                                          color: Colors.red,
+                                        child: Icon(
+                                          Icons.close_rounded,
+                                          size: 16,
+                                          color: Colors.red.shade700,
                                         ),
                                       ),
                                     ),
@@ -747,33 +1053,98 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Carga de imágenes de CI y perfil
                     Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                      elevation: isDark ? 2 : 8,
+                      shadowColor: isDark
+                        ? Colors.transparent
+                        : Colors.purple.withOpacity(0.2),
+                      surfaceTintColor: isDark
+                        ? colorScheme.secondaryContainer
+                        : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: isDark
+                            ? null
+                            : LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white,
+                                  Colors.purple.shade50.withOpacity(0.3),
+                                ],
+                              ),
+                        ),
+                        padding: const EdgeInsets.all(20.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Documentos de Identidad',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.purple.shade400,
+                                        Colors.purple.shade600,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.purple.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Documentos de Identidad',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.purple.shade800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _esEdicion
+                                            ? 'Puedes actualizar las fotos del CI si es necesario'
+                                            : 'Anverso y Reverso del CI son obligatorios *',
+                                        style: TextStyle(
+                                          color: _esEdicion
+                                              ? Colors.grey[600]
+                                              : Colors.purple.shade600,
+                                          fontSize: 12,
+                                          fontWeight: _esEdicion
+                                              ? FontWeight.normal
+                                              : FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _esEdicion
-                                  ? 'Puedes actualizar las fotos del CI si es necesario'
-                                  : 'Anverso y Reverso del CI son obligatorios para crear',
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 _buildImagePicker(
@@ -801,12 +1172,36 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Las imágenes deben pesar menos de 1MB. Se comprimen automáticamente.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.amber.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 16,
+                                    color: Colors.amber.shade800,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Las imágenes deben pesar menos de 1MB. Se comprimen automáticamente.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.amber.shade900,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -814,22 +1209,88 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancelar'),
+                          child: Container(
+                            height: 54,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.cancel_outlined, size: 22),
+                              label: const Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey.shade700,
+                                side: BorderSide(
+                                  color: Colors.grey.shade400,
+                                  width: 2,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: _guardarCliente,
-                            child: Text(
-                              _esEdicion ? 'Actualizar' : 'Crear Cliente',
+                          child: Container(
+                            height: 54,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              gradient: LinearGradient(
+                                colors: [
+                                  RoleColors.managerPrimary,
+                                  RoleColors.managerPrimary.withOpacity(0.8),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: RoleColors.managerPrimary.withOpacity(0.4),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: _guardarCliente,
+                              icon: Icon(
+                                _esEdicion ? Icons.save_rounded : Icons.person_add_rounded,
+                                size: 22,
+                              ),
+                              label: Text(
+                                _esEdicion ? 'Actualizar' : 'Crear Cliente',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -838,6 +1299,7 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                   ],
                 ),
               ),
+            ),
             ),
     );
   }
@@ -1387,14 +1849,39 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
     required VoidCallback onTap,
     bool isProcessing = false,
   }) {
+    final bool hasImage = file != null || (existingUrl != null && existingUrl.isNotEmpty);
+
     return Expanded(
       child: InkWell(
         onTap: isProcessing ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 90,
+          height: 110,
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
+            gradient: hasImage
+                ? null
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.purple.shade50,
+                      Colors.purple.shade100.withOpacity(0.5),
+                    ],
+                  ),
+            border: Border.all(
+              color: hasImage
+                  ? Colors.purple.shade400
+                  : Colors.purple.shade200,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.purple.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Stack(
             children: [
@@ -1402,68 +1889,107 @@ class _ManagerClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
                 builder: (_) {
                   if (file != null) {
                     return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.file(
                         file,
                         fit: BoxFit.cover,
                         width: double.infinity,
+                        height: double.infinity,
                       ),
                     );
                   } else if (existingUrl != null && existingUrl.isNotEmpty) {
                     return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       child: Image.network(
                         existingUrl,
                         fit: BoxFit.cover,
                         width: double.infinity,
+                        height: double.infinity,
                       ),
                     );
                   }
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.add_a_photo,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade100,
+                          shape: BoxShape.circle,
                         ),
-                        textAlign: TextAlign.center,
+                        child: Icon(
+                          Icons.add_photo_alternate_rounded,
+                          size: 28,
+                          color: Colors.purple.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.purple.shade800,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                        ),
                       ),
                     ],
                   );
                 },
               ),
+              // Badge de edición cuando hay imagen
+              if (hasImage && !isProcessing)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade600,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               // Overlay de carga durante procesamiento
               if (isProcessing)
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(
-                          strokeWidth: 2,
+                          strokeWidth: 3,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             Colors.white,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 10),
                         Text(
                           'Procesando...',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

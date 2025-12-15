@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .env
+
+# Environment variables for iOS builds
+ios/Flutter/EnvironmentVariables.xcconfig
