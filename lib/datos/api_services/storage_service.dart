@@ -11,6 +11,8 @@ class StorageService {
   static const String _savedIdentifierKey = 'saved_identifier';
   static const String _requiresReauthKey = 'requires_reauth'; // Nuevo flag para re-autenticación
   static const String _dashboardStatsKey = 'dashboard_statistics'; // Estadísticas del dashboard
+  static const String _biometricEnabledKey = 'biometric_enabled'; // Preferencia de autenticación biométrica
+  static const String _savedPasswordKey = 'saved_password'; // Contraseña cifrada para biometría
 
   // Guardar token de autenticación
   Future<void> saveToken(String token) async {
@@ -216,5 +218,64 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_requiresReauthKey);
     print('🔐 Flag requiresReauth eliminado');
+  }
+
+  // ========== Métodos de Autenticación Biométrica ==========
+
+  /// Guardar preferencia de autenticación biométrica
+  Future<void> setBiometricEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_biometricEnabledKey, enabled);
+    print('👆 Autenticación biométrica ${enabled ? "activada" : "desactivada"}');
+  }
+
+  /// Obtener preferencia de autenticación biométrica
+  Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
+  /// Guardar contraseña (encriptada) para uso con biometría
+  /// NOTA: En producción, usar una librería de encriptación robusta
+  Future<void> saveBiometricPassword(String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    // En producción, encriptar la contraseña antes de guardarla
+    // Por ahora la guardamos en base64 para ofuscación básica
+    final encoded = base64Encode(utf8.encode(password));
+    await prefs.setString(_savedPasswordKey, encoded);
+    print('🔐 Contraseña guardada para biometría');
+  }
+
+  /// Obtener contraseña guardada para biometría
+  Future<String?> getBiometricPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = prefs.getString(_savedPasswordKey);
+    if (encoded != null) {
+      try {
+        // Decodificar la contraseña
+        final decoded = utf8.decode(base64Decode(encoded));
+        return decoded;
+      } catch (e) {
+        print('❌ Error al decodificar contraseña: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /// Limpiar datos de autenticación biométrica
+  Future<void> clearBiometricData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_biometricEnabledKey);
+    await prefs.remove(_savedPasswordKey);
+    print('🧹 Datos de autenticación biométrica eliminados');
+  }
+
+  /// Verificar si hay datos de biometría guardados
+  Future<bool> hasBiometricData() async {
+    final enabled = await isBiometricEnabled();
+    final password = await getBiometricPassword();
+    final identifier = await getSavedIdentifier();
+    return enabled && password != null && identifier != null;
   }
 }

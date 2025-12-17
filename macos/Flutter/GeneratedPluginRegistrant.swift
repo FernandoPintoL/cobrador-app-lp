@@ -11,6 +11,7 @@ import flutter_image_compress_macos
 import flutter_libphonenumber_darwin
 import flutter_local_notifications
 import geolocator_apple
+import local_auth_darwin
 import mobile_scanner
 import package_info_plus
 import path_provider_foundation
@@ -27,6 +28,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FlutterLibphonenumberPlugin.register(with: registry.registrar(forPlugin: "FlutterLibphonenumberPlugin"))
   FlutterLocalNotificationsPlugin.register(with: registry.registrar(forPlugin: "FlutterLocalNotificationsPlugin"))
   GeolocatorPlugin.register(with: registry.registrar(forPlugin: "GeolocatorPlugin"))
+  LocalAuthPlugin.register(with: registry.registrar(forPlugin: "LocalAuthPlugin"))
   MobileScannerPlugin.register(with: registry.registrar(forPlugin: "MobileScannerPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))

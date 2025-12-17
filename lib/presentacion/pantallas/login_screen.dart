@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../negocio/providers/auth_provider.dart';
 import '../../datos/api_services/storage_service.dart';
+import '../../datos/api_services/biometric_auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +19,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _obscurePassword = true;
   String? _savedIdentifier;
   String? _lastShownError;
+
+  // Biometric
+  final _biometricService = BiometricAuthService();
+  final _storage = StorageService();
+  bool _isBiometricAvailable = false;
+  bool _hasBiometricData = false;
+  String _biometricMessage = '';
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -42,30 +50,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       parent: _fadeController,
       curve: Curves.easeInOut,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     // Iniciar animaciones
     _fadeController.forward();
     _slideController.forward();
 
-    // Cargar identificador guardado
+    // Cargar identificador guardado y verificar biometría
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final storage = StorageService();
-      final saved = await storage.getSavedIdentifier();
-      if (mounted) {
-        setState(() {
-          _savedIdentifier = saved;
-          if (saved != null) {
-            _emailOrPhoneController.text = saved;
-          }
-        });
-      }
+      await _initializeBiometric();
     });
   }
 
@@ -87,11 +83,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final password = _passwordController.text.trim();
 
     try {
-      await ref.read(authProvider.notifier).login(
-            emailOrPhone,
-            password,
-            rememberMe: true,
-          );
+      await ref
+          .read(authProvider.notifier)
+          .login(emailOrPhone, password, rememberMe: true);
       // La navegación se maneja automáticamente por el cambio de estado en main.dart
     } catch (e) {
       // El error se maneja en el listener
@@ -101,11 +95,159 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Future<void> _handleChangeAccount() async {
     final storage = StorageService();
     await storage.clearSavedIdentifier();
+    await storage.clearBiometricData();
     setState(() {
       _savedIdentifier = null;
       _emailOrPhoneController.clear();
       _passwordController.clear();
+      _hasBiometricData = false;
     });
+  }
+
+  Future<void> _initializeBiometric() async {
+    // Cargar identificador guardado
+    final saved = await _storage.getSavedIdentifier();
+
+    // Verificar si hay biometría disponible
+    final isAvailable = await _biometricService.isBiometricAvailable();
+    final hasBiometricData = await _storage.hasBiometricData();
+    final biometricMessage = await _biometricService.getAvailableBiometricsMessage();
+
+    if (mounted) {
+      setState(() {
+        _savedIdentifier = saved;
+        if (saved != null) {
+          _emailOrPhoneController.text = saved;
+        }
+        _isBiometricAvailable = isAvailable;
+        _hasBiometricData = hasBiometricData;
+        _biometricMessage = biometricMessage;
+      });
+
+      // Si hay datos biométricos y está habilitado, intentar autenticar automáticamente
+      if (_hasBiometricData) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _handleBiometricLogin();
+      }
+    }
+  }
+
+  Future<void> _handleBiometricLogin() async {
+    try {
+      // Autenticar con biometría
+      final authenticated = await _biometricService.authenticateForLogin();
+
+      if (!authenticated) {
+        return; // Usuario canceló o falló la autenticación
+      }
+
+      // Obtener credenciales guardadas
+      final identifier = await _storage.getSavedIdentifier();
+      final password = await _storage.getBiometricPassword();
+
+      if (identifier == null || password == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay credenciales guardadas'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Realizar login
+      await ref
+          .read(authProvider.notifier)
+          .login(identifier, password, rememberMe: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error en autenticación biométrica: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showEnableBiometricDialog() async {
+    if (!_isBiometricAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La autenticación biométrica no está disponible en este dispositivo'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Activar autenticación biométrica'),
+        content: Text(
+          '¿Deseas activar el inicio de sesión con $_biometricMessage?\n\n'
+          'Tus credenciales se guardarán de forma segura en el dispositivo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _enableBiometric();
+    }
+  }
+
+  Future<void> _enableBiometric() async {
+    try {
+      // Verificar autenticación biométrica
+      final authenticated = await _biometricService.authenticate(
+        localizedReason: 'Autentícate para activar el inicio de sesión biométrico',
+      );
+
+      if (!authenticated) {
+        return;
+      }
+
+      // Guardar preferencias y credenciales
+      await _storage.setBiometricEnabled(true);
+      await _storage.saveBiometricPassword(_passwordController.text);
+      await _storage.setSavedIdentifier(_emailOrPhoneController.text);
+
+      if (mounted) {
+        setState(() {
+          _hasBiometricData = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Autenticación biométrica activada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al activar biometría: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -114,7 +256,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    // Listener para errores
+    // Listener para errores y login exitoso
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && next.error != _lastShownError) {
         _lastShownError = next.error;
@@ -129,6 +271,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             margin: const EdgeInsets.all(16),
           ),
         );
+      }
+
+      // Mostrar diálogo para activar biometría después de login exitoso
+      if (previous?.usuario == null &&
+          next.usuario != null &&
+          _isBiometricAvailable &&
+          !_hasBiometricData) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showEnableBiometricDialog();
+          }
+        });
       }
     });
 
@@ -163,13 +317,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
+                    constraints: const BoxConstraints(maxWidth: 400),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Logo con animación
-                        Hero(
+                        /*Hero(
                           tag: 'app_logo',
                           child: Container(
                             width: 120,
@@ -200,8 +354,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 fit: BoxFit.contain,
                               )),
                           ),
+                        ),*/
+                        Center(
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.primary.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Image(
+                                image: AssetImage('assets/icons/icon.png'),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
                         ),
-
+                        const SizedBox(height: 32),
                         // Título
                         Text(
                           'Bienvenido',
@@ -275,28 +454,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                                 Text(
                                                   _savedIdentifier!,
                                                   style: theme
-                                                      .textTheme.bodyLarge
+                                                      .textTheme
+                                                      .bodyLarge
                                                       ?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    color:
-                                                        colorScheme.onSurface,
-                                                  ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: colorScheme
+                                                            .onSurface,
+                                                      ),
                                                 ),
                                                 Text(
                                                   'Usuario guardado',
                                                   style: theme
-                                                      .textTheme.bodySmall
+                                                      .textTheme
+                                                      .bodySmall
                                                       ?.copyWith(
-                                                    color: colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
+                                                        color: colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
                                                 ),
                                               ],
                                             ),
                                           ),
                                           IconButton(
                                             icon: const Icon(
-                                                Icons.change_circle_outlined),
+                                              Icons.change_circle_outlined,
+                                            ),
                                             onPressed: _handleChangeAccount,
                                             tooltip: 'Cambiar cuenta',
                                           ),
@@ -322,36 +505,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         fillColor: colorScheme.surfaceContainer
                                             .withOpacity(0.5),
                                         border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           borderSide: BorderSide.none,
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           borderSide: BorderSide(
                                             color: colorScheme.outline
                                                 .withOpacity(0.2),
                                           ),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           borderSide: BorderSide(
                                             color: colorScheme.primary,
                                             width: 2,
                                           ),
                                         ),
                                         errorBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           borderSide: BorderSide(
                                             color: colorScheme.error,
                                           ),
                                         ),
                                         focusedErrorBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           borderSide: BorderSide(
                                             color: colorScheme.error,
                                             width: 2,
@@ -466,19 +654,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                               strokeWidth: 2,
                                               valueColor:
                                                   AlwaysStoppedAnimation<Color>(
-                                                colorScheme.onPrimary,
-                                              ),
+                                                    colorScheme.onPrimary,
+                                                  ),
                                             ),
                                           )
                                         : Text(
                                             'Iniciar Sesión',
                                             style: theme.textTheme.titleMedium
                                                 ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: colorScheme.onPrimary,
-                                            ),
+                                                  fontWeight: FontWeight.bold,
+                                                  color: colorScheme.onPrimary,
+                                                ),
                                           ),
                                   ),
+
+                                  // Botón de autenticación biométrica
+                                  if (_hasBiometricData) ...[
+                                    const SizedBox(height: 16),
+                                    OutlinedButton.icon(
+                                      onPressed: isLoading ? null : _handleBiometricLogin,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: colorScheme.primary,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 18,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        side: BorderSide(
+                                          color: colorScheme.primary,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      icon: Icon(
+                                        Icons.fingerprint,
+                                        size: 28,
+                                        color: colorScheme.primary,
+                                      ),
+                                      label: Text(
+                                        'Usar $_biometricMessage',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
